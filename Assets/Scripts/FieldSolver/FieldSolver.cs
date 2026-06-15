@@ -13,6 +13,8 @@ public class FieldSolver : MonoBehaviour
     private float[] temperatureGrid;
     private float cellSize;
 
+    public MagneticFieldSolver magneticFieldSolver;
+
     public float[] Potential => potentialGrid;
     public Vector3[] ElectricField => electricFieldGrid;
     public float[] Temperature => temperatureGrid;
@@ -248,5 +250,23 @@ public class FieldSolver : MonoBehaviour
         System.Array.Copy(potential, potentialGrid, potentialGrid.Length);
         System.Array.Copy(eField, electricFieldGrid, electricFieldGrid.Length);
         System.Array.Copy(temperature, temperatureGrid, temperatureGrid.Length);
+    }
+
+    public Vector3 SampleMagneticField(Vector3 worldPos)
+    {
+        return magneticFieldSolver != null
+            ? magneticFieldSolver.SampleMagneticField(worldPos)
+            : Vector3.zero;
+    }
+
+    public Vector3[] GetMagneticFieldGrid()
+    {
+        return magneticFieldSolver != null ? magneticFieldSolver.MagneticField : null;
+    }
+
+    public void SetMagneticFieldData(Vector3[] bField)
+    {
+        if (magneticFieldSolver != null)
+            magneticFieldSolver.SetFieldData(bField);
     }
 }

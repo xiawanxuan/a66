@@ -14,6 +14,11 @@ public class ArcSimSceneSetup : MonoBehaviour
         fieldSolverObj.transform.SetParent(simRoot.transform);
         FieldSolver fs = fieldSolverObj.AddComponent<FieldSolver>();
 
+        GameObject bFieldSolverObj = new GameObject("MagneticFieldSolver");
+        bFieldSolverObj.transform.SetParent(simRoot.transform);
+        MagneticFieldSolver bfs = bFieldSolverObj.AddComponent<MagneticFieldSolver>();
+        fs.magneticFieldSolver = bfs;
+
         GameObject plasmaObj = new GameObject("PlasmaSystem");
         plasmaObj.transform.SetParent(simRoot.transform);
         PlasmaParticleSystem ps = plasmaObj.AddComponent<PlasmaParticleSystem>();
@@ -43,6 +48,15 @@ public class ArcSimSceneSetup : MonoBehaviour
         if (anodeMaterial != null)
             anodeObj.GetComponent<MeshRenderer>().material = anodeMaterial;
 
+        GameObject coilObj = new GameObject("MagneticCoil_01");
+        coilObj.transform.SetParent(simRoot.transform);
+        coilObj.transform.position = new Vector3(0f, 0f, 0.15f);
+        coilObj.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+        MagneticCoil coil = coilObj.AddComponent<MagneticCoil>();
+        coil.current = 100f;
+        coil.turns = 10;
+        coil.radius = 0.1f;
+
         GameObject dragObj = new GameObject("DragInteraction");
         dragObj.transform.SetParent(simRoot.transform);
         ElectrodeDragInteraction drag = dragObj.AddComponent<ElectrodeDragInteraction>();
@@ -62,7 +76,9 @@ public class ArcSimSceneSetup : MonoBehaviour
         SimulationManager mgr = managerObj.AddComponent<SimulationManager>();
         mgr.cathode = cathode;
         mgr.anode = anode;
+        mgr.magneticCoils = new MagneticCoil[] { coil };
         mgr.fieldSolver = fs;
+        mgr.magneticFieldSolver = bfs;
         mgr.plasmaSystem = ps;
         mgr.plasmaRenderer = pr;
         mgr.arcTrigger = at;

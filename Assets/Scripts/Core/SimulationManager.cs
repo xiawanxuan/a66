@@ -5,7 +5,9 @@ public class SimulationManager : MonoBehaviour
 {
     public ElectrodeGeometry cathode;
     public ElectrodeGeometry anode;
+    public MagneticCoil[] magneticCoils;
     public FieldSolver fieldSolver;
+    public MagneticFieldSolver magneticFieldSolver;
     public PlasmaParticleSystem plasmaSystem;
     public PlasmaParticleRenderer plasmaRenderer;
     public ArcBreakdownTrigger arcTrigger;
@@ -50,6 +52,14 @@ public class SimulationManager : MonoBehaviour
             fieldSolver.gridResolution = config.fieldGridResolution;
             fieldSolver.domainSize = config.domainSize;
             fieldSolver.InitializeGrids();
+
+            if (magneticFieldSolver != null)
+            {
+                magneticFieldSolver.gridResolution = config.fieldGridResolution;
+                magneticFieldSolver.domainSize = config.domainSize;
+                magneticFieldSolver.InitializeGrid();
+                fieldSolver.magneticFieldSolver = magneticFieldSolver;
+            }
         }
 
         if (plasmaSystem != null)
@@ -191,6 +201,18 @@ public class SimulationManager : MonoBehaviour
         float voltage = paramController != null ? paramController.Voltage : config.voltage;
         fieldSolver.SolveElectricField(electrodes, voltage);
 
+        if (magneticFieldSolver != null && magneticCoils != null)
+        {
+            List<CoilData> coils = new List<CoilData>();
+            foreach (var coil in magneticCoils)
+            {
+                if (coil == null) continue;
+                coil.SyncTransform();
+                coils.Add(coil.Data);
+            }
+            magneticFieldSolver.SolveMagneticField(coils);
+        }
+
         float coolingWind = paramController != null ? paramController.CoolingWindSpeed : config.coolingWindSpeed;
         float ambientTemp = config.gasTemperatureAmbient;
 
@@ -270,6 +292,25 @@ public class SimulationManager : MonoBehaviour
 
         if (cathode != null) cathode.UpdatePotential(paramController != null ? paramController.Voltage : config.voltage);
         if (anode != null) anode.UpdatePotential(paramController != null ? paramController.Voltage : config.voltage);
+
+        if (magneticCoils != null && paramController != null)
+        {
+            foreach (var coil in magneticCoils)
+            {
+                if (coil == null) continue;
+                coil.current = paramController.CoilCurrent;
+                coil.turns = paramController.CoilTurns;
+                coil.radius = paramController.CoilRadius;
+                coil.UpdateCurrent(paramController.CoilCurrent);
+                coil.UpdateTurns(paramController.CoilTurns);
+                coil.GenerateTorusMesh();
+            }
+        }
+
+        if (plasmaSystem != null && paramController != null)
+        {
+            plasmaSystem.lorentzForceScale = paramController.LorentzForceScale;
+        }
     }
 
     void OnElectrodeMoved()
@@ -307,13 +348,15 @@ public class SimulationManager : MonoBehaviour
     public void SaveSnapshot()
     {
         if (snapshotSystem == null) return;
-        snapshotSystem.SaveSnapshot(fieldSolver, plasmaSystem, paramController, cathode, anode, simulationTime);
+        snapshotSystem.SaveSnapshot(fieldSolver, plasmaSystem, paramController, cathode, anode,
+            magneticFieldSolver, magneticCoils, simulationTime);
     }
 
     public void LoadSnapshot()
     {
         if (snapshotSystem == null) return;
-        if (snapshotSystem.LoadLatestSnapshot(fieldSolver, plasmaSystem, paramController, cathode, anode, out float time))
+        if (snapshotSystem.LoadLatestSnapshot(fieldSolver, plasmaSystem, paramController, cathode, anode,
+            magneticFieldSolver, magneticCoils, out float time))
         {
             simulationTime = time;
         }

@@ -18,5 +18,9 @@
   "electrodeRadius": 0.02,
   "electrodeGap": 0.1,
   "domainSize": 1.0,
-  "simulationSpeed": 1.0
+  "simulationSpeed": 1.0,
+  "coilCurrent": 100.0,
+  "coilTurns": 10,
+  "coilRadius": 0.1,
+  "lorentzForceScale": 1000000.0
 }

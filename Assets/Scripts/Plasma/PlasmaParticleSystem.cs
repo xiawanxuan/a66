@@ -11,6 +11,7 @@ public class PlasmaParticleSystem : MonoBehaviour
     public float recombinationCoeff = 2.0e-13f;
     public float domainSize = 1f;
     public float ambientTemp = 300f;
+    public float lorentzForceScale = 1e6f;
 
     private ParticleState[] particles;
     private int aliveCount;
@@ -83,6 +84,7 @@ public class PlasmaParticleSystem : MonoBehaviour
 
             Vector3 eField = fieldSolver.SampleElectricField(p.position);
             float localTemp = fieldSolver.SampleTemperature(p.position);
+            Vector3 bField = fieldSolver.SampleMagneticField(p.position);
 
             float mobility = p.charge < 0 ? electronMobility : ionMobility;
             Vector3 driftVelocity = p.charge * mobility * eField;
@@ -93,7 +95,10 @@ public class PlasmaParticleSystem : MonoBehaviour
 
             Vector3 windForce = Vector3.right * coolingWind * 0.01f;
 
-            p.velocity = driftVelocity + randomWalk + windForce;
+            Vector3 lorentzAccel = p.charge * lorentzForceScale * Vector3.Cross(p.velocity + driftVelocity, bField)
+                / (p.charge < 0 ? 9.11e-4f : 6.64e-3f);
+
+            p.velocity = driftVelocity + randomWalk + windForce + lorentzAccel * dt;
             p.position += p.velocity * dt;
 
             p.temperature = Mathf.Lerp(p.temperature, localTemp, dt * 2f);

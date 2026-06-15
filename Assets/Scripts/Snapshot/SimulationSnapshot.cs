@@ -26,6 +26,21 @@ public class SnapshotData
     public float cathodeZ;
     public float anodeX;
     public float anodeZ;
+    public float[] bFieldX;
+    public float[] bFieldY;
+    public float[] bFieldZ;
+    public int coilCount;
+    public float[] coilPosX;
+    public float[] coilPosZ;
+    public float[] coilAxisX;
+    public float[] coilAxisZ;
+    public float[] coilRadius;
+    public float[] coilCurrent;
+    public int[] coilTurns;
+    public float coilCurrentParam;
+    public int coilTurnsParam;
+    public float coilRadiusParam;
+    public float lorentzForceScale;
 }
 
 public class SimulationSnapshot : MonoBehaviour
@@ -61,6 +76,8 @@ public class SimulationSnapshot : MonoBehaviour
         SimParameterController paramController,
         ElectrodeGeometry cathode,
         ElectrodeGeometry anode,
+        MagneticFieldSolver magneticFieldSolver,
+        MagneticCoil[] coils,
         float simTime)
     {
         SnapshotData snap = new SnapshotData();
@@ -68,6 +85,10 @@ public class SimulationSnapshot : MonoBehaviour
         snap.voltage = paramController.Voltage;
         snap.gasPressure = paramController.GasPressure;
         snap.coolingWindSpeed = paramController.CoolingWindSpeed;
+        snap.coilCurrentParam = paramController.CoilCurrent;
+        snap.coilTurnsParam = paramController.CoilTurns;
+        snap.coilRadiusParam = paramController.CoilRadius;
+        snap.lorentzForceScale = paramController.LorentzForceScale;
 
         fieldSolver.GetFieldData(out float[] potential, out Vector3[] eField, out float[] temperature);
 
@@ -83,6 +104,50 @@ public class SimulationSnapshot : MonoBehaviour
             snap.temperatureField[i] = temperature[i];
             snap.eFieldX[i] = eField[i].x;
             snap.eFieldZ[i] = eField[i].z;
+        }
+
+        if (magneticFieldSolver != null)
+        {
+            Vector3[] bField = magneticFieldSolver.MagneticField;
+            if (bField != null && bField.Length == gridSize)
+            {
+                snap.bFieldX = new float[gridSize];
+                snap.bFieldY = new float[gridSize];
+                snap.bFieldZ = new float[gridSize];
+                for (int i = 0; i < gridSize; i++)
+                {
+                    snap.bFieldX[i] = bField[i].x;
+                    snap.bFieldY[i] = bField[i].y;
+                    snap.bFieldZ[i] = bField[i].z;
+                }
+            }
+        }
+
+        if (coils != null)
+        {
+            List<MagneticCoil> validCoils = new List<MagneticCoil>();
+            foreach (var c in coils) if (c != null) validCoils.Add(c);
+            snap.coilCount = validCoils.Count;
+            snap.coilPosX = new float[snap.coilCount];
+            snap.coilPosZ = new float[snap.coilCount];
+            snap.coilAxisX = new float[snap.coilCount];
+            snap.coilAxisZ = new float[snap.coilCount];
+            snap.coilRadius = new float[snap.coilCount];
+            snap.coilCurrent = new float[snap.coilCount];
+            snap.coilTurns = new int[snap.coilCount];
+
+            for (int c = 0; c < validCoils.Count; c++)
+            {
+                var coil = validCoils[c];
+                coil.SyncTransform();
+                snap.coilPosX[c] = coil.transform.position.x;
+                snap.coilPosZ[c] = coil.transform.position.z;
+                snap.coilAxisX[c] = coil.transform.up.x;
+                snap.coilAxisZ[c] = coil.transform.up.z;
+                snap.coilRadius[c] = coil.radius;
+                snap.coilCurrent[c] = coil.current;
+                snap.coilTurns[c] = coil.turns;
+            }
         }
 
         ParticleState[] particles = plasmaSystem.GetAllParticles();
@@ -144,6 +209,8 @@ public class SimulationSnapshot : MonoBehaviour
         SimParameterController paramController,
         ElectrodeGeometry cathode,
         ElectrodeGeometry anode,
+        MagneticFieldSolver magneticFieldSolver,
+        MagneticCoil[] coils,
         out float simTime)
     {
         simTime = 0f;
@@ -151,7 +218,8 @@ public class SimulationSnapshot : MonoBehaviour
         if (snapshotFiles.Count == 0) return false;
 
         string latestFile = snapshotFiles[snapshotFiles.Count - 1];
-        return LoadSnapshotByName(latestFile, fieldSolver, plasmaSystem, paramController, cathode, anode, out simTime);
+        return LoadSnapshotByName(latestFile, fieldSolver, plasmaSystem, paramController, cathode, anode,
+            magneticFieldSolver, coils, out simTime);
     }
 
     public bool LoadSnapshotByName(string filename,
@@ -160,6 +228,8 @@ public class SimulationSnapshot : MonoBehaviour
         SimParameterController paramController,
         ElectrodeGeometry cathode,
         ElectrodeGeometry anode,
+        MagneticFieldSolver magneticFieldSolver,
+        MagneticCoil[] coils,
         out float simTime)
     {
         simTime = 0f;
@@ -185,6 +255,45 @@ public class SimulationSnapshot : MonoBehaviour
         }
 
         fieldSolver.SetFieldData(potential, eField, temperature);
+
+        if (magneticFieldSolver != null && snap.bFieldX != null && snap.bFieldX.Length == gridSize)
+        {
+            Vector3[] bField = new Vector3[gridSize];
+            for (int i = 0; i < gridSize; i++)
+            {
+                bField[i] = new Vector3(snap.bFieldX[i], snap.bFieldY[i], snap.bFieldZ[i]);
+            }
+            magneticFieldSolver.SetFieldData(bField);
+        }
+
+        if (paramController != null)
+        {
+            paramController.CoilCurrent = snap.coilCurrentParam;
+            paramController.CoilTurns = snap.coilTurnsParam;
+            paramController.CoilRadius = snap.coilRadiusParam;
+            paramController.LorentzForceScale = snap.lorentzForceScale;
+        }
+
+        if (coils != null && snap.coilCount > 0)
+        {
+            int n = Mathf.Min(snap.coilCount, coils.Length);
+            for (int c = 0; c < n; c++)
+            {
+                var coil = coils[c];
+                if (coil == null) continue;
+                coil.transform.position = new Vector3(snap.coilPosX[c], 0f, snap.coilPosZ[c]);
+                Vector3 axis = new Vector3(snap.coilAxisX[c], 0f, snap.coilAxisZ[c]);
+                if (axis.sqrMagnitude > 1e-6f)
+                    coil.transform.rotation = Quaternion.FromToRotation(Vector3.up, axis);
+                coil.radius = snap.coilRadius[c];
+                coil.current = snap.coilCurrent[c];
+                coil.turns = snap.coilTurns[c];
+                coil.GenerateTorusMesh();
+            }
+        }
+
+        if (plasmaSystem != null)
+            plasmaSystem.lorentzForceScale = snap.lorentzForceScale;
 
         plasmaSystem.ClearAll();
         for (int i = 0; i < snap.particleCount; i++)

@@ -10,6 +10,8 @@ public class SimHUD : MonoBehaviour
     public Text fieldStrengthText;
     public Text arcStatusText;
     public Text simTimeText;
+    public Text bFieldStrengthText;
+    public Text coilStatusText;
 
     private float fpsTimer;
     private int frameCount;
@@ -63,6 +65,17 @@ public class SimHUD : MonoBehaviour
         {
             float maxE = simManager.fieldSolver.GetMaxFieldStrength();
             fieldStrengthText.text = $"E_max: {maxE:E2} V/m";
+        }
+
+        if (bFieldStrengthText != null && simManager.magneticFieldSolver != null)
+        {
+            float maxB = simManager.magneticFieldSolver.GetMaxFieldMagnitude();
+            bFieldStrengthText.text = $"B_max: {maxB:E2} T";
+        }
+
+        if (coilStatusText != null && simManager.paramController != null)
+        {
+            coilStatusText.text = $"Coil: {simManager.paramController.CoilTurns} N × {simManager.paramController.CoilCurrent:F0} A";
         }
     }
 }

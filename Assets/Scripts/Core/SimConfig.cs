@@ -23,4 +23,8 @@ public class SimConfig
     public float electrodeGap = 0.1f;
     public float domainSize = 1f;
     public float simulationSpeed = 1f;
+    public float coilCurrent = 100f;
+    public int coilTurns = 10;
+    public float coilRadius = 0.1f;
+    public float lorentzForceScale = 1e6f;
 }
