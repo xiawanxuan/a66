@@ -1,0 +1,22 @@
+{
+  "voltage": 10000.0,
+  "gasPressure": 101325.0,
+  "coolingWindSpeed": 0.0,
+  "breakdownFieldThreshold": 3.0e6,
+  "maxParticleCount": 80000,
+  "fieldGridResolution": 128,
+  "thermalGridResolution": 128,
+  "particleEmitRate": 2000,
+  "particleLifetime": 2.0,
+  "ionMobility": 1.5e-4,
+  "electronMobility": 0.03,
+  "recombinationCoeff": 2.0e-13,
+  "gasTemperatureAmbient": 300.0,
+  "arcTemperaturePeak": 20000.0,
+  "thermalConductivity": 0.025,
+  "thermalDiffusivity": 2.2e-5,
+  "electrodeRadius": 0.02,
+  "electrodeGap": 0.1,
+  "domainSize": 1.0,
+  "simulationSpeed": 1.0
+}
