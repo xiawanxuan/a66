@@ -127,8 +127,23 @@ public class PlasmaParticleSystem : MonoBehaviour
             ParticleState p = particles[i];
             if (!p.alive) continue;
 
-            int ci = Mathf.FloorToInt((p.position.x + domainSize * 0.5f) / cellSize);
-            int cj = Mathf.FloorToInt((p.position.z + domainSize * 0.5f) / cellSize);
+            float h = domainSize * 0.5f;
+            if (Mathf.Abs(p.position.x) > h || Mathf.Abs(p.position.z) > h)
+            {
+                if (!toRemove.Contains(i))
+                    toRemove.Add(i);
+                continue;
+            }
+
+            int ci = Mathf.FloorToInt((p.position.x + h) / cellSize);
+            int cj = Mathf.FloorToInt((p.position.z + h) / cellSize);
+            if (ci < 0 || ci >= gridSize || cj < 0 || cj >= gridSize)
+            {
+                if (!toRemove.Contains(i))
+                    toRemove.Add(i);
+                continue;
+            }
+
             int key = ci * 1000 + cj;
 
             if (!grid.ContainsKey(key))
